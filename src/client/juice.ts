@@ -1,8 +1,35 @@
 import gsap from "gsap";
 import { Container, Graphics, Text } from "pixi.js";
+import { formatNum } from "../engine/format.js";
 
 // Every effect here is code-driven — this is where ~80% of "game feel" comes from,
 // with no extra art required. Mirrors the PRD §8.1 checklist.
+
+/** A projectile that flies from a point to a target, then triggers `onHit`. */
+export function projectile(layer: Container, fromX: number, fromY: number, toX: number, toY: number, color: number, onHit?: () => void): void {
+  const p = new Graphics().circle(0, 0, 4).fill(color);
+  p.x = fromX;
+  p.y = fromY;
+  layer.addChild(p);
+  gsap.to(p, {
+    x: toX,
+    y: toY,
+    duration: 0.16,
+    ease: "power1.in",
+    onComplete: () => {
+      p.destroy();
+      onHit?.();
+    },
+  });
+}
+
+/** A bright beam that snaps between two points and fades. */
+export function beam(layer: Container, fromX: number, fromY: number, toX: number, toY: number, color: number): void {
+  const g = new Graphics();
+  g.moveTo(fromX, fromY).lineTo(toX, toY).stroke({ color, width: 5, alpha: 0.9 });
+  layer.addChild(g);
+  gsap.to(g, { alpha: 0, duration: 0.22, ease: "power2.out", onComplete: () => g.destroy() });
+}
 
 /** White-overlay flash sized to the body (works on any color, unlike tint). */
 export function hitFlash(view: Container, body: Container): void {
@@ -30,7 +57,7 @@ export function knockback(view: Container, dir: 1 | -1, dist = 16): void {
 /** Floating damage number; bigger + magenta on crit. */
 export function floatingNumber(layer: Container, x: number, y: number, value: number, crit: boolean): void {
   const t = new Text({
-    text: crit ? `${value}!` : `${value}`,
+    text: crit ? `${formatNum(value)}!` : formatNum(value),
     style: {
       fill: crit ? 0xff5d9e : 0xffffff,
       fontFamily: "ui-monospace, monospace",

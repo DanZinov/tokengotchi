@@ -2,6 +2,7 @@ import { CONFIG } from "./constants.js";
 import { effectiveStats, mobForFloor, rollDamage, type Mob } from "./combat.js";
 import { rollDrop, tryEquip } from "./loot.js";
 import { applyXp } from "./progression.js";
+import { attackStyle, zoneTheme } from "./cosmetics.js";
 import type { CombatEvent, GameState, SessionSummary } from "./types.js";
 import type { RNG } from "../util/rng.js";
 
@@ -57,15 +58,23 @@ export function runSession(state: GameState, rng: RNG): { events: CombatEvent[];
     next.hero.energy -= CONFIG.ENERGY_PER_TICK;
     summary.energySpent += CONFIG.ENERGY_PER_TICK;
 
-    // Hero strikes.
-    const h = rollDamage(es.atk * mult, mob.def, es.crit, rng);
+    // Hero strikes. The unlocked attack style (by level) gives a small damage spike and
+    // drives the visual (melee lunge / ranged shot / multishot / beam) on the client.
+    const style = attackStyle(next.hero.level);
+    const styleDmg = CONFIG.ATTACK_STYLE_DMG[style];
+    const critChance = es.crit + (style === "beam" ? CONFIG.BEAM_CRIT_BONUS : 0);
+    const h = rollDamage(es.atk * mult * styleDmg, mob.def, critChance, rng);
     mob.hp -= h.dmg;
-    events.push({ type: "attack", who: "hero", dmg: h.dmg, crit: h.crit, targetHpAfter: Math.max(0, mob.hp), targetMaxHp: mob.maxHp });
+    events.push({ type: "attack", who: "hero", dmg: h.dmg, crit: h.crit, style, targetHpAfter: Math.max(0, mob.hp), targetMaxHp: mob.maxHp });
 
     if (mob.hp <= 0) {
       const floor = next.progress.floor;
       events.push({ type: "kill", floor, isBoss: mob.isBoss });
-      if (mob.isBoss) next.progress.bossesCleared += 1;
+      if (mob.isBoss) {
+        next.progress.bossesCleared += 1;
+        // Zone landmark beat (every boss = a new zone).
+        events.push({ type: "milestone", floor, zoneName: zoneTheme(zoneFor(floor)).name });
+      }
 
       const reward = killReward(floor);
       const gold = Math.round(reward.gold * mult);
@@ -86,8 +95,9 @@ export function runSession(state: GameState, rng: RNG): { events: CombatEvent[];
         heroHp = Math.min(heroMax, heroHp + Math.round(heroMax * 0.25)); // small heal on level
       }
 
-      // Loot.
-      const drop = rollDrop(floor, rng);
+      // Loot — guaranteed rare-or-better at milestone floors (every 25th).
+      const milestone = floor % CONFIG.MILESTONE_DROP_INTERVAL === 0;
+      const drop = rollDrop(floor, rng, milestone ? { guaranteed: true, minRarity: "rare" } : undefined);
       if (drop) {
         const eq = tryEquip(next.gear, drop);
         next.gear = eq.gear;

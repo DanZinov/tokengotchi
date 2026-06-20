@@ -1,8 +1,14 @@
-import { CONFIG } from "./constants.js";
+import { CONFIG, RARITIES } from "./constants.js";
 import type { Gear, Item, Rarity, Slot, Stats } from "./types.js";
 import type { RNG } from "../util/rng.js";
 
 const SLOTS: Slot[] = ["weapon", "armor", "trinket"];
+
+/** Options for milestone/guaranteed drops. */
+export interface DropOpts {
+  guaranteed?: boolean; // skip the drop-rate gate (always drops)
+  minRarity?: Rarity; // floor the rarity at this tier
+}
 
 const NAMES: Record<Slot, string[]> = {
   weapon: ["Compiler Blade", "Null Pointer", "Stack Smasher", "Regex Lance", "Merge Hammer", "Segfault Edge"],
@@ -46,10 +52,13 @@ export function itemPower(item: Item | null): number {
   return (m.atk ?? 0) * 2 + (m.def ?? 0) * 2 + (m.hp ?? 0) * 0.25 + (m.crit ?? 0) * 200;
 }
 
-export function rollDrop(floor: number, rng: RNG): Item | null {
-  if (rng() >= CONFIG.DROP_RATE) return null;
+export function rollDrop(floor: number, rng: RNG, opts?: DropOpts): Item | null {
+  if (!opts?.guaranteed && rng() >= CONFIG.DROP_RATE) return null;
   const slot = SLOTS[Math.floor(rng() * SLOTS.length)];
-  const rarity = weightedRarity(floor, rng);
+  let rarity = weightedRarity(floor, rng);
+  if (opts?.minRarity && RARITIES.indexOf(opts.minRarity) > RARITIES.indexOf(rarity)) {
+    rarity = opts.minRarity;
+  }
   const power = (1 + floor * 0.15) * RARITY_MULT[rarity];
 
   let mods: Partial<Stats>;

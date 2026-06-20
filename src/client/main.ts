@@ -1,10 +1,14 @@
-import { Application, Container } from "pixi.js";
+import { Application, Container, Graphics } from "pixi.js";
 import { CONFIG, CLASSES } from "../engine/constants.js";
 import { canPrestige, prestigeGain } from "../engine/prestige.js";
+import { prestigeRank, zoneTheme } from "../engine/cosmetics.js";
+import { formatNum } from "../engine/format.js";
 import type { ClassId, CombatEvent, GameState, Item, Slot } from "../engine/types.js";
 import { makeHero, makeMob, makeBar, evolveHero, type Bar, type Fighter } from "./sprites.js";
-import { floatingNumber, hitFlash, knockback, particleBurst, scalePunch, screenShake } from "./juice.js";
+import { beam, floatingNumber, hitFlash, knockback, particleBurst, projectile, scalePunch, screenShake } from "./juice.js";
 import { DONATE_LINKS } from "./donate.config.js";
+
+const zoneFor = (floor: number) => Math.floor((floor - 1) / CONFIG.BOSS_INTERVAL) + 1;
 
 type Msg =
   | { kind: "state"; state: GameState }
@@ -28,13 +32,6 @@ const CLASS_TAG: Record<ClassId, string> = {
 
 const $ = (id: string) => document.getElementById(id)!;
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-
-function fmtTokens(n: number): string {
-  if (n >= 1e9) return (n / 1e9).toFixed(2) + "B";
-  if (n >= 1e6) return (n / 1e6).toFixed(2) + "M";
-  if (n >= 1e3) return (n / 1e3).toFixed(1) + "k";
-  return String(Math.round(n));
-}
 
 /** Compact "+12 atk, +0.02 crit" summary of an item's mods. */
 function modSummary(item: Item): string {
@@ -60,9 +57,23 @@ async function boot() {
   const VW = 520;
   const VH = 360;
 
+  const bg = new Graphics(); // zone backdrop, behind everything
   const world = new Container();
   const fx = new Container();
-  app.stage.addChild(world);
+  app.stage.addChild(bg, world);
+
+  let bgColor = 0x0a0e0c;
+  function drawBg() {
+    bg.clear();
+    bg.rect(0, 0, app.screen.width, app.screen.height).fill(bgColor);
+  }
+  function setZone(floor: number) {
+    const next = zoneTheme(zoneFor(floor)).bg;
+    if (next !== bgColor) {
+      bgColor = next;
+      drawBg();
+    }
+  }
 
   let hero: Fighter = makeHero("architect");
   let heroBar: Bar = makeBar(110, 0x6cf0a0);
@@ -77,6 +88,7 @@ async function boot() {
   function layout() {
     const w = app.screen.width;
     const h = app.screen.height;
+    drawBg(); // keep the zone backdrop covering the stage on resize
     // Fit the virtual arena into the stage (clamp so it never gets absurd either way).
     const scale = Math.max(0.3, Math.min(1.5, Math.min(w / VW, h / VH)));
     world.scale.set(scale);
@@ -102,8 +114,9 @@ async function boot() {
 
   function respawnMob(floor: number) {
     const isBoss = floor % CONFIG.BOSS_INTERVAL === 0;
+    setZone(floor);
     world.removeChild(mob.view);
-    mob = makeMob(isBoss);
+    mob = makeMob(isBoss, zoneTheme(zoneFor(floor)).mobColor);
     world.addChildAt(mob.view, world.getChildIndex(mobBar.view));
     mobBar.set(1);
     layout();
@@ -122,8 +135,8 @@ async function boot() {
     $("floor").textContent = String(s.progress.floor);
     $("level").textContent = String(s.hero.level);
     $("streak").textContent = `${s.daily.streakDays}d`;
-    $("tokens").textContent = fmtTokens(s.usage.lifetimeTokens);
-    $("energy").textContent = s.hero.energy.toFixed(1);
+    $("tokens").textContent = formatNum(s.usage.lifetimeTokens);
+    $("energy").textContent = formatNum(s.hero.energy);
   }
 
   function updateClassPickerActive(current: ClassId) {
@@ -173,7 +186,8 @@ async function boot() {
     const stat = $("prestige-stat");
     if (s.prestige.count > 0) {
       stat.style.display = "flex";
-      $("prestige").textContent = `×${s.prestige.multiplier.toFixed(2)} · ${s.prestige.count}`;
+      const rank = prestigeRank(s.prestige.count);
+      $("prestige").textContent = `${rank.badge} ${rank.name} ×${formatNum(s.prestige.multiplier)}`;
     } else {
       stat.style.display = "none";
     }
@@ -188,7 +202,9 @@ async function boot() {
       rebuildHero(s.hero.class);
       lastClass = s.hero.class;
     }
-    evolveHero(hero, s.hero.level, s.gear.weapon?.rarity ?? "none");
+    const rankColor = s.prestige.count > 0 ? prestigeRank(s.prestige.count).color : undefined;
+    evolveHero(hero, s.hero.level, s.gear.weapon?.rarity ?? "none", rankColor);
+    setZone(s.progress.floor);
   }
 
   function log(line: string, color = "#9fbfae") {
@@ -276,7 +292,19 @@ async function boot() {
     switch (ev.type) {
       case "attack": {
         if (ev.who === "hero") {
-          knockback(hero.view, 1, 14);
+          const style = ev.style ?? "melee";
+          const sx = hero.view.x + 26;
+          const sy = hero.view.y - 30;
+          // The unlocked attack style drives the visual: lunge / shot / volley / beam.
+          if (style === "melee") {
+            knockback(hero.view, 1, 14);
+          } else if (style === "beam") {
+            beam(fx, sx, sy, mob.view.x, mob.view.y - 30, 0x6cb4f0);
+            screenShake(world, 4);
+          } else {
+            const shots = style === "multishot" ? 3 : 1;
+            for (let i = 0; i < shots; i++) projectile(fx, sx, sy - 6 + i * 10, mob.view.x, mob.view.y - 36 + i * 10, 0xffd17d);
+          }
           hitFlash(mob.view, mob.body);
           scalePunch(mob.view, 0.12);
           mobBar.set(ev.targetHpAfter / ev.targetMaxHp);
@@ -324,6 +352,14 @@ async function boot() {
         log(`★ level ${ev.level}`, "#6cf0a0");
         toast(`Level ${ev.level}!`, "#6cf0a0");
         await sleep(160);
+        break;
+      }
+      case "milestone": {
+        screenShake(world, 8);
+        particleBurst(fx, mob.view.x, mob.view.y - 40, 0xc59cff, 22);
+        log(`◆ Floor ${ev.floor} — entering ${ev.zoneName}`, "#c59cff");
+        toast(`${ev.zoneName} · floor ${ev.floor}`, "#c59cff");
+        await sleep(220);
         break;
       }
       case "defeat": {
@@ -375,7 +411,7 @@ async function boot() {
         applyState(msg.state);
       } else if (msg.kind === "tick") {
         if (msg.tokens > 0) {
-          log(`+${fmtTokens(msg.tokens)} tokens → +${msg.energyGained.toFixed(1)} energy`, "#6cf0a0");
+          log(`+${formatNum(msg.tokens)} tokens → +${formatNum(msg.energyGained)} energy`, "#6cf0a0");
         }
         queue.push(...msg.events);
         void play();

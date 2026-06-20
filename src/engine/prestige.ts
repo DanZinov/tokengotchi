@@ -24,7 +24,9 @@ export function prestige(state: GameState): GameState {
   const gained = prestigeGain(state);
 
   s.prestige.count += 1;
-  s.prestige.multiplier = +(s.prestige.multiplier + gained).toFixed(2);
+  // Compound: each prestige multiplies your standing power by PRESTIGE_RANK_FACTOR and
+  // adds a depth bonus for how far you got — so every reset climbs meaningfully deeper.
+  s.prestige.multiplier = +(s.prestige.multiplier * CONFIG.PRESTIGE_RANK_FACTOR + gained).toFixed(2);
 
   // Fresh run.
   s.hero.level = 1;

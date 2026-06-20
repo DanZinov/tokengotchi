@@ -1,6 +1,7 @@
 export type Rarity = "common" | "uncommon" | "rare" | "epic" | "legendary";
 export type Slot = "weapon" | "armor" | "trinket";
 export type ClassId = "vibecoder" | "refactorer" | "architect";
+export type AttackStyle = "melee" | "ranged" | "multishot" | "beam";
 
 export interface Stats {
   hp: number;
@@ -70,11 +71,12 @@ export interface GameState {
 }
 
 export type CombatEvent =
-  | { type: "attack"; who: "hero" | "mob"; dmg: number; crit: boolean; targetHpAfter: number; targetMaxHp: number }
+  | { type: "attack"; who: "hero" | "mob"; dmg: number; crit: boolean; style?: AttackStyle; targetHpAfter: number; targetMaxHp: number }
   | { type: "kill"; floor: number; isBoss: boolean }
   | { type: "advance"; floor: number }
   | { type: "drop"; item: Item; equipped: boolean }
   | { type: "levelup"; level: number }
+  | { type: "milestone"; floor: number; zoneName: string }
   | { type: "defeat"; floor: number };
 
 export interface SessionSummary {

@@ -10,6 +10,8 @@ import { newGame, migrate } from "../src/save/store.js";
 import { extractTokens } from "../src/readers/types.js";
 import { mulberry32 } from "../src/util/rng.js";
 import { CONFIG } from "../src/engine/constants.js";
+import { heroTier, attackStyle, prestigeRank, zoneTheme } from "../src/engine/cosmetics.js";
+import { formatNum } from "../src/engine/format.js";
 
 describe("conversion", () => {
   it("streak multiplier ramps from 1 to max and clamps", () => {
@@ -221,7 +223,8 @@ describe("prestige", () => {
     const gain = prestigeGain(s);
     const after = prestige(s);
     expect(after.prestige.count).toBe(1);
-    expect(after.prestige.multiplier).toBeCloseTo(1 + gain);
+    // multiplier compounds: prior (1) × PRESTIGE_RANK_FACTOR + floor-depth gain
+    expect(after.prestige.multiplier).toBeCloseTo(1 * CONFIG.PRESTIGE_RANK_FACTOR + gain);
     expect(after.progress.floor).toBe(1);
     expect(after.hero.level).toBe(1);
     expect(after.gold).toBe(0);
@@ -288,5 +291,116 @@ describe("usage token extraction", () => {
   it("ignores lines without usage", () => {
     expect(extractTokens({ foo: "bar" })).toBe(0);
     expect(extractTokens(null)).toBe(0);
+  });
+});
+
+// ── Deep progression (Ascension) ─────────────────────────────────────────────
+
+describe("format: formatNum", () => {
+  it("formats with K/M/B/T suffixes", () => {
+    expect(formatNum(42)).toBe("42");
+    expect(formatNum(1500)).toBe("1.50K");
+    expect(formatNum(42_000)).toBe("42.0K");
+    expect(formatNum(1_200_000)).toBe("1.20M");
+    expect(formatNum(4_200_000_000)).toBe("4.20B");
+    expect(formatNum(1.5e12)).toBe("1.50T");
+  });
+  it("handles small/odd input", () => {
+    expect(formatNum(0)).toBe("0");
+    expect(formatNum(0.5)).toBe("0.5");
+    expect(formatNum(-2500)).toBe("-2.50K");
+    expect(formatNum(Infinity)).toBe("0");
+  });
+});
+
+describe("cosmetics: heroTier", () => {
+  it("tier rises at the level thresholds", () => {
+    expect(heroTier(1).tier).toBe(0);
+    expect(heroTier(24).tier).toBe(0);
+    expect(heroTier(25).tier).toBe(1);
+    expect(heroTier(50).tier).toBe(2);
+    expect(heroTier(100).tier).toBe(3);
+    expect(heroTier(250).tier).toBe(4);
+    expect(heroTier(500).tier).toBe(5);
+    expect(heroTier(1000).tier).toBe(6);
+    expect(heroTier(99999).tier).toBe(6);
+  });
+  it("unlocks features in order", () => {
+    expect(heroTier(1).features.weapon).toBe(false);
+    expect(heroTier(25).features.weapon).toBe(true);
+    expect(heroTier(50).features.aura).toBe(true);
+    expect(heroTier(250).features.wings).toBe(true);
+    expect(heroTier(500).features.crown).toBe(true);
+    expect(heroTier(500).features.orbs).toBe(false);
+    expect(heroTier(1000).features.orbs).toBe(true);
+  });
+});
+
+describe("cosmetics: attackStyle", () => {
+  it("unlocks styles at level thresholds", () => {
+    expect(attackStyle(1)).toBe("melee");
+    expect(attackStyle(CONFIG.RANGED_LEVEL - 1)).toBe("melee");
+    expect(attackStyle(CONFIG.RANGED_LEVEL)).toBe("ranged");
+    expect(attackStyle(CONFIG.MULTISHOT_LEVEL)).toBe("multishot");
+    expect(attackStyle(CONFIG.BEAM_LEVEL)).toBe("beam");
+    expect(attackStyle(9999)).toBe("beam");
+  });
+});
+
+describe("cosmetics: prestigeRank", () => {
+  it("maps count to a named rank", () => {
+    expect(prestigeRank(0).name).toBe("Recruit");
+    expect(prestigeRank(1).name).toBe("Bronze");
+    expect(prestigeRank(3).name).toBe("Gold");
+  });
+  it("repeats the top rank with a numeral past the table", () => {
+    expect(prestigeRank(6).name).toBe("Mythic");
+    expect(prestigeRank(7).name).toBe("Mythic II");
+    expect(prestigeRank(8).name).toBe("Mythic III");
+  });
+});
+
+describe("cosmetics: zoneTheme", () => {
+  it("returns a theme and cycles the palette", () => {
+    expect(zoneTheme(1).name).toBe("The Sandbox");
+    expect(typeof zoneTheme(1).bg).toBe("number");
+    // 6 zones in the palette → zone 7 wraps to zone 1's theme
+    expect(zoneTheme(7).name).toBe(zoneTheme(1).name);
+  });
+});
+
+describe("combat: attack styles + milestones", () => {
+  it("tags hero attacks with the level-appropriate style", () => {
+    const s = newGame("architect");
+    s.hero.level = CONFIG.RANGED_LEVEL; // ranged unlocked
+    s.hero.energy = 5;
+    const res = runSession(s, mulberry32(3));
+    const heroAttacks = res.events.filter((e) => e.type === "attack" && (e as any).who === "hero") as any[];
+    expect(heroAttacks.length).toBeGreaterThan(0);
+    expect(heroAttacks.every((a) => a.style === "ranged")).toBe(true);
+  });
+
+  it("emits a milestone event when a boss is cleared", () => {
+    const s = newGame("architect");
+    s.hero.level = 50; // strong enough to clear quickly
+    s.prestige.multiplier = 50; // big boost so the floor-10 boss dies this session
+    s.progress.floor = 10; // a boss
+    s.hero.energy = 60;
+    const res = runSession(s, mulberry32(7));
+    const milestones = res.events.filter((e) => e.type === "milestone") as any[];
+    expect(milestones.length).toBeGreaterThanOrEqual(1);
+    expect(typeof milestones[0].zoneName).toBe("string");
+  });
+
+  it("guarantees a rare-or-better drop on a milestone floor", () => {
+    const order = ["common", "uncommon", "rare", "epic", "legendary"];
+    let dropped = 0;
+    for (let i = 0; i < 20; i++) {
+      const item = rollDrop(25, mulberry32(100 + i), { guaranteed: true, minRarity: "rare" });
+      expect(item).not.toBeNull(); // guaranteed → always drops
+      expect(order.indexOf(item!.rarity)).toBeGreaterThanOrEqual(order.indexOf("rare"));
+      dropped++;
+    }
+    expect(dropped).toBe(20);
   });
 });

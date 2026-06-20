@@ -17,6 +17,17 @@ export const CONFIG = {
   // prestige (free in Phase 1; was a Pro feature in the PRD)
   PRESTIGE_MIN_FLOOR: 10, // must clear the first boss before you can prestige
   PRESTIGE_MULT_PER_FLOOR: 0.01, // permanent multiplier gained per floor reached at prestige
+  PRESTIGE_RANK_FACTOR: 1.5, // multiplier compounds ×this each prestige (deep-game pacing)
+
+  // attack styles (Stage 3) — unlock levels + the damage spike each one grants
+  RANGED_LEVEL: 40,
+  MULTISHOT_LEVEL: 120,
+  BEAM_LEVEL: 300,
+  ATTACK_STYLE_DMG: { melee: 1, ranged: 1.05, multishot: 1.4, beam: 1.25 },
+  BEAM_CRIT_BONUS: 0.15, // beam style adds this to crit chance
+
+  // milestones (Stage 5)
+  MILESTONE_DROP_INTERVAL: 25, // guaranteed rare-or-better drop every N floors
 
   // combat economy
   ENERGY_PER_TICK: 1, // one round per energy
