@@ -103,7 +103,7 @@
       .shot .bar { display: flex; gap: 7px; padding: 10px 13px; border-bottom: 1px solid var(--line); background: var(--panel2); }
       .shot .bar i { width: 11px; height: 11px; border-radius: 50%; display: inline-block; }
       .shot .bar i:nth-child(1){ background:#ff5f57;} .shot .bar i:nth-child(2){ background:#febc2e;} .shot .bar i:nth-child(3){ background:#28c840;}
-      .shot img { display: block; width: 100%; height: auto; }
+      .shot img, .shot video { display: block; width: 100%; height: auto; background: var(--bg); }
 
       /* sections */
       section { padding: clamp(48px, 8vw, 80px) 0; border-top: 1px solid var(--line); }
@@ -142,8 +142,9 @@
 
       /* support */
       .support { text-align: center; }
-      .support .big { font-size: clamp(22px, 4vw, 34px); color: #eafff3; margin: 0 0 12px; }
+      .support .big { font-size: clamp(22px, 4vw, 34px); color: #eafff3; max-width: 720px; margin: 0 auto 12px; }
       .support p { color: var(--dim); max-width: 560px; margin: 0 auto 26px; }
+      .support-btns { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
 
       footer { border-top: 1px solid var(--line); padding: 30px 0 50px; color: var(--dim2); font-size: 13px; }
       footer .wrap { display: flex; justify-content: space-between; gap: 14px; flex-wrap: wrap; }
@@ -195,7 +196,16 @@
 
         <div class="shot">
           <div class="bar"><i></i><i></i><i></i></div>
-          <img src="./screenshot.png" alt="Tokengotchi gameplay: a hero auto-battling a boss with live token-to-energy feed, classes, loadout and prestige panels" />
+          <video
+            src="./demo.mp4"
+            poster="./demo-poster.jpg"
+            autoplay
+            loop
+            muted
+            playsinline
+            preload="metadata"
+            aria-label="Tokengotchi gameplay: a fully-evolved Mythic-rank hero with wings, crown and orbs auto-battling a deep-floor boss, with live token-to-energy feed, loadout and prestige panels"
+          ></video>
         </div>
       </div>
     </header>
@@ -229,12 +239,12 @@
       <div class="wrap">
         <p class="eyebrow">What's inside</p>
         <h2>A real idle game, not a gimmick.</h2>
-        <p class="lead">Tuned combat math, juicy feedback, and the progression loop you'd expect from an idle RPG.</p>
+        <p class="lead">Tuned combat math, juicy feedback, and a deep long-game: your hero visibly transforms, unlocks new attack styles, and climbs prestige ranks through themed zones.</p>
         <div class="feat">
           <div class="card b1">
             <div class="ic">⚔️</div>
             <h3>Idle auto-battler</h3>
-            <p>Hit flashes, crits, knockback, damage numbers, particles and screen shake — the juice that makes it feel alive.</p>
+            <p>Hit flashes, crits, knockback, damage numbers, particles and screen shake — plus new attack styles as you level: melee, ranged, multi-shot, then a screen-shaking beam.</p>
           </div>
           <div class="card b2">
             <div class="ic">🧙</div>
@@ -243,17 +253,17 @@
           </div>
           <div class="card b3">
             <div class="ic">💎</div>
-            <h3>Gear &amp; loot</h3>
-            <p>Common → Legendary drops with rarity glow, a loadout you can see, and a hero that visibly evolves.</p>
+            <h3>Loot &amp; evolution</h3>
+            <p>Common → Legendary drops with rarity glow, a loadout you can see, and a hero that visibly transforms — earning a weapon, aura, wings, a crown and orbiting orbs as it grows.</p>
           </div>
           <div class="card">
-            <div class="ic">♾️</div>
-            <h3>Prestige</h3>
-            <p>Reset the run past the first boss for a permanent multiplier — the long-tail loop that keeps you climbing.</p>
+            <div class="ic">👑</div>
+            <h3>Prestige &amp; ranks</h3>
+            <p>Reset past the first boss for a permanent, compounding multiplier and climb the ranks — Bronze, Silver, Gold… all the way to Mythic. Themed zones keep the depths fresh.</p>
           </div>
           <div class="card">
             <div class="ic">🔌</div>
-            <h3>Reads 4 tools</h3>
+            <h3>Reads your agents</h3>
             <p>Claude Code, Codex &amp; Gemini out of the box (Cursor experimental). Add another with one small adapter.</p>
           </div>
           <div class="card">
@@ -282,7 +292,10 @@
         <p class="eyebrow">Support</p>
         <p class="big">Free forever. Fueled by good vibes.</p>
         <p>If Tokengotchi made a coding session more fun, a coffee helps cover art &amp; hosting. It never unlocks power — just gratitude.</p>
-        <a class="btn kofi" href="https://ko-fi.com/danzin" target="_blank" rel="noopener" style="font-size:15px;padding:12px 22px;">♥ Buy me a coffee on Ko-fi</a>
+        <div class="support-btns">
+          <a class="btn kofi" href="https://ko-fi.com/danzin" target="_blank" rel="noopener" style="font-size:15px;padding:12px 22px;">♥ Support on Ko-fi</a>
+          <a class="btn ghost" href="https://buymeacoffee.com/danzin" target="_blank" rel="noopener" style="font-size:15px;padding:12px 22px;">or Buy Me a Coffee</a>
+        </div>
       </div>
     </section>
 
@@ -291,7 +304,9 @@
         <span>Tokengotchi — an idle auto-battler fueled by your AI coding tokens.</span>
         <span>
           <a href="https://github.com/DanZinov/tokengotchi" target="_blank" rel="noopener">GitHub</a> ·
-          <a href="https://ko-fi.com/danzin" target="_blank" rel="noopener">Ko-fi</a>
+          <a href="https://www.npmjs.com/package/tokengotchi" target="_blank" rel="noopener">npm</a> ·
+          <a href="https://ko-fi.com/danzin" target="_blank" rel="noopener">Ko-fi</a> ·
+          <a href="https://buymeacoffee.com/danzin" target="_blank" rel="noopener">Buy Me a Coffee</a>
         </span>
       </div>
     </footer>

@@ -16,3 +16,6 @@ bin/
 
 # internal strategy/architecture doc — kept out of the public repo
 TokenForge-PRD*.md
+
+# raw screen-recording source (compressed docs/demo.mp4 is what ships)
+/*.mov
