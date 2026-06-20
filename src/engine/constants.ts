@@ -44,6 +44,7 @@ export const CONFIG = {
   // damage
   CRIT_MULT: 2,
   DAMAGE_VARIANCE: 0.1, // +/- 10%
+  MAX_HIT_FRACTION: 0.3, // a single mob hit can't exceed 30% of the hero's max HP (no one-shots)
 
   // loot
   DROP_RATE: 0.15,

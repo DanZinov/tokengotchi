@@ -362,11 +362,12 @@ async function boot() {
         await sleep(220);
         break;
       }
-      case "defeat": {
-        screenShake(world, 10);
-        log(`stalled on floor ${ev.floor} — need more energy`, "#ff8d8d");
-        toast("Out of energy — come back after coding", "#ff8d8d");
-        await sleep(200);
+      case "stalled": {
+        // Quiet progress beat — the hero is wearing down a wall boss across sessions.
+        // No alarming "out of energy" toast; the HP % visibly drops as you keep coding.
+        const pct = Math.max(0, Math.round(ev.mobHpPct * 100));
+        log(`⚔ wearing down floor ${ev.floor} — ${pct}% HP left`, "#f0b46c");
+        await sleep(120);
         break;
       }
     }
@@ -413,6 +414,7 @@ async function boot() {
         if (msg.tokens > 0) {
           log(`+${formatNum(msg.tokens)} tokens → +${formatNum(msg.energyGained)} energy`, "#6cf0a0");
         }
+        if (!playing) heroBar.set(1); // hero regens to full at the start of each session
         queue.push(...msg.events);
         void play();
       } else if (msg.kind === "notice") {

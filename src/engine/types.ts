@@ -77,7 +77,7 @@ export type CombatEvent =
   | { type: "drop"; item: Item; equipped: boolean }
   | { type: "levelup"; level: number }
   | { type: "milestone"; floor: number; zoneName: string }
-  | { type: "defeat"; floor: number };
+  | { type: "stalled"; floor: number; mobHpPct: number };
 
 export interface SessionSummary {
   energySpent: number;

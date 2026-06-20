@@ -121,21 +121,31 @@ export function runSession(state: GameState, rng: RNG): { events: CombatEvent[];
       continue; // dead mob doesn't counterattack
     }
 
-    // Mob strikes back.
+    // Mob strikes back. Cap a single hit so even a frontier boss can't one-shot the hero —
+    // the HP bar visibly drains over several rounds instead of snapping to empty.
     const m = rollDamage(mob.atk, es.def, 0, rng);
-    heroHp -= m.dmg;
-    events.push({ type: "attack", who: "mob", dmg: m.dmg, crit: false, targetHpAfter: Math.max(0, heroHp), targetMaxHp: heroMax });
+    const dmg = Math.min(m.dmg, Math.ceil(heroMax * CONFIG.MAX_HIT_FRACTION));
+    heroHp -= dmg;
+    events.push({ type: "attack", who: "mob", dmg, crit: false, targetHpAfter: Math.max(0, heroHp), targetMaxHp: heroMax });
 
     if (heroHp <= 0) {
-      events.push({ type: "defeat", floor: next.progress.floor });
-      summary.defeated = true;
-      break; // soft wall: stop here until more energy arrives next session
+      // The hero falls — but gets back up while energy remains and keeps chipping the
+      // (persistent) mob. Energy always = progress; no hard wall, and no per-death spam.
+      // The soft wall is simply running out of energy until you code more.
+      heroHp = heroMax;
     }
   }
 
   // Carry the current mob's remaining HP into the save so the next session continues
   // the fight instead of resetting it (this is what un-sticks unbeatable bosses).
   next.progress.mobHp = Math.max(0, Math.round(mob.hp));
+
+  // "Stuck" = spent energy this session but cleared no floors (e.g. wearing down a wall
+  // boss). Surface ONE quiet progress beat — not a per-death "out of energy" toast.
+  summary.defeated = summary.floorsCleared === 0 && summary.energySpent > 0;
+  if (summary.defeated) {
+    events.push({ type: "stalled", floor: next.progress.floor, mobHpPct: mob.maxHp ? Math.max(0, mob.hp) / mob.maxHp : 1 });
+  }
 
   return { events, summary, state: next };
 }
