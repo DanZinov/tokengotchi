@@ -23,7 +23,18 @@ npx tokengotchi --mock     # fake usage, for a quick look without coding
 ```
 
 Flags: `--mock`, `--port=7070`, `--interval=60000` (ms between syncs), `--no-open`
-(don't auto-open the browser), `--once` (one sync, print a summary, exit).
+(don't auto-open anything), `--tab` (open a normal browser tab instead of an app window),
+`--once` (one sync, print a summary, exit).
+
+### Standalone window
+
+By default Tokengotchi opens as a **chromeless app window** (via Chrome/Edge/Brave
+`--app` mode) so it looks like a standalone app, not a browser tab — park it wherever you
+like. If no Chromium browser is found, it falls back to your default browser; use `--tab`
+to force that.
+
+It's also an **installable PWA**: from the page, your browser's **Install** button (or
+Safari → *File → Add to Dock* on macOS) gives it its own dock/taskbar icon and window.
 
 The UI is fully responsive — shrink it into a side-strip next to your editor and the
 arena scales to fit.

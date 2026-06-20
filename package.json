@@ -1,6 +1,6 @@
 {
   "name": "tokengotchi",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": false,
   "type": "module",
   "description": "An idle auto-battler fueled by your real AI coding token usage. Your work powers your hero.",

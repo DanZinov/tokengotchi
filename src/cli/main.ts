@@ -1,6 +1,7 @@
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { existsSync } from "node:fs";
+import { homedir } from "node:os";
 import { exec } from "node:child_process";
 import { tick } from "../engine/index.js";
 import { canPrestige, prestige } from "../engine/prestige.js";
@@ -17,14 +18,16 @@ interface Args {
   port: number;
   intervalMs: number;
   open: boolean;
+  tab: boolean;
 }
 
 function parseArgs(argv: string[]): Args {
-  const a: Args = { mock: false, once: false, port: 7070, intervalMs: 60_000, open: true };
+  const a: Args = { mock: false, once: false, port: 7070, intervalMs: 60_000, open: true, tab: false };
   for (const arg of argv) {
     if (arg === "--mock") a.mock = true;
     else if (arg === "--once") a.once = true;
     else if (arg === "--no-open") a.open = false;
+    else if (arg === "--tab") a.tab = true; // force a normal browser tab instead of an app window
     else if (arg.startsWith("--port=")) a.port = Number(arg.split("=")[1]) || a.port;
     else if (arg.startsWith("--interval=")) a.intervalMs = Number(arg.split("=")[1]) || a.intervalMs;
   }
@@ -41,10 +44,47 @@ function resolveDistDir(): string {
   return candidates.find((d) => existsSync(d)) ?? candidates[0];
 }
 
-/** Best-effort: open the game in the default browser (skipped with --no-open). */
-function openBrowser(url: string): void {
+/** Open the default browser to `url` (a normal tab). */
+function openTab(url: string): void {
   const cmd = process.platform === "darwin" ? "open" : process.platform === "win32" ? "start \"\"" : "xdg-open";
   exec(`${cmd} ${url}`, () => {});
+}
+
+/**
+ * Try to open `url` as a chromeless **app window** (Chrome/Edge/Brave `--app=`), so the
+ * game looks like a standalone floating app instead of a browser tab. Falls back to a
+ * normal browser tab if no Chromium browser is found. Best-effort; never throws.
+ */
+function openBrowser(url: string, appWindow: boolean): void {
+  if (!appWindow) return openTab(url);
+  const size = "--window-size=480,860";
+
+  if (process.platform === "darwin") {
+    // Launch the browser binary directly (macOS `open --args` is ignored if the app is
+    // already running, which would drop our --app flag).
+    const apps = ["Google Chrome", "Microsoft Edge", "Brave Browser", "Vivaldi", "Chromium"];
+    for (const a of apps) {
+      for (const base of ["/Applications", join(homedir(), "Applications")]) {
+        const bin = join(base, `${a}.app`, "Contents", "MacOS", a);
+        if (existsSync(bin)) {
+          exec(`"${bin}" --app=${url} ${size}`, () => {});
+          return;
+        }
+      }
+    }
+    return openTab(url);
+  }
+
+  if (process.platform === "win32") {
+    exec(`start "" chrome --app=${url} ${size}`, (e) => {
+      if (e) exec(`start "" msedge --app=${url} ${size}`, (e2) => { if (e2) openTab(url); });
+    });
+    return;
+  }
+
+  // linux: try common Chromium binaries in app mode, else fall back to the default browser.
+  const bins = ["google-chrome", "google-chrome-stable", "chromium", "chromium-browser", "microsoft-edge", "brave-browser"];
+  exec(bins.map((b) => `${b} --app=${url} ${size}`).join(" || ") + ` || xdg-open ${url}`, () => {});
 }
 
 async function main() {
@@ -92,7 +132,7 @@ async function main() {
   server.onConnect((send) => send({ kind: "state", state }));
   const url = `http://localhost:${args.port}`;
   console.log(`Serving on ${url}  (ws on same port)`);
-  if (args.open) openBrowser(url);
+  if (args.open) openBrowser(url, !args.tab);
 
   // Client → engine commands: pick a class, prestige. Each mutates state, persists,
   // and broadcasts the new state so every connected client stays in sync.

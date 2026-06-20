@@ -4,6 +4,10 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Tokengotchi</title>
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="theme-color" content="#0a0e0c" />
+    <link rel="icon" href="/icon-192.png" />
+    <link rel="apple-touch-icon" href="/icon-192.png" />
     <style>
       :root {
         --bg: #0a0e0c;
@@ -99,7 +103,7 @@
       /* loadout */
       .slot { display: flex; align-items: center; gap: 8px; font-size: 12px; padding: 3px 0; }
       .slot .icon { width: 8px; height: 8px; border-radius: 2px; background: var(--dim); flex: none; }
-      .slot .sname { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .slot .sname { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
       .slot .smod { color: var(--dim); font-size: 11px; }
       .slot.empty .sname { color: var(--dim); font-style: italic; }
       .inv-note { color: var(--dim); font-size: 11px; margin-top: 7px; }
@@ -156,17 +160,22 @@
         body { grid-template-columns: 1fr minmax(220px, 300px); }
       }
 
-      /* small / narrow window: stack vertically, compact everything, let the rail scroll */
+      /* small / narrow window (e.g. the standalone app window): abandon the fixed-viewport
+         grid and let the WHOLE window scroll, so every panel is reachable and nothing is
+         hidden. The header stays pinned so the HUD is always visible while you scroll. */
       @media (max-width: 760px) {
-        body {
-          grid-template-columns: 1fr;
-          grid-template-areas: "header" "stage" "side";
-          grid-template-rows: auto 1fr minmax(190px, 44vh);
+        body { display: block; height: auto; min-height: 100vh; }
+        header {
+          position: sticky; top: 0; z-index: 6;
+          gap: 8px 14px; padding: 8px 12px; background: var(--panel);
         }
-        header { gap: 12px 14px; padding: 8px 12px; }
         .stat { font-size: 12px; }
-        #side { border-left: none; border-top: 1px solid var(--line); overflow-y: auto; }
-        .panel { padding: 9px 11px; }
+        #stage { height: 46vh; min-height: 300px; }
+        #side { display: block; border-left: none; border-top: 1px solid var(--line); }
+        .panel { padding: 11px 12px; }
+        /* the log is the only unbounded panel — cap it with its own scroll so the rest
+           (class / loadout / prestige) stays visible above it */
+        #log { max-height: 38vh; overflow-y: auto; }
       }
 
       /* very small: trim the header to fit, shrink type and controls */
@@ -239,5 +248,12 @@
     </div>
 
     <script type="module" src="/src/client/main.ts"></script>
+    <script>
+      // Registering a service worker makes Tokengotchi installable as a standalone app
+      // (browser "Install" button → its own window + dock/taskbar icon).
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js").catch(() => {}));
+      }
+    </script>
   </body>
 </html>

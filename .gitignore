@@ -9,6 +9,10 @@ bin/
 
 # os / editor
 .DS_Store
+.playwright-mcp/
+# loose verification screenshots at repo root (not public/ icons or docs/ assets)
+/*.png
+/*.jpeg
 
 # internal strategy/architecture doc — kept out of the public repo
 TokenForge-PRD*.md
