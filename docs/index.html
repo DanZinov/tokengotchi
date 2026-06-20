@@ -1,0 +1,311 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Tokengotchi — an idle RPG fueled by your AI coding tokens</title>
+    <meta name="description" content="Tokengotchi turns the tokens you already burn in Claude Code, Cursor, Codex & Gemini into energy for an idle auto-battler. Your work powers your hero. Free & open." />
+    <meta property="og:title" content="Tokengotchi — an idle RPG fueled by your AI coding tokens" />
+    <meta property="og:description" content="The tokens you already burn become energy for a hero that fights, levels, and loots while you code. Free, local, no pay-to-win." />
+    <meta property="og:image" content="https://danzinov.github.io/tokengotchi/screenshot.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2032%2032'%3E%3Crect%20width='32'%20height='32'%20rx='7'%20fill='%230a0e0c'/%3E%3Crect%20x='8'%20y='8'%20width='16'%20height='16'%20rx='4'%20fill='%236cf0a0'/%3E%3Ccircle%20cx='13'%20cy='15'%20r='1.6'%20fill='%230a0e0c'/%3E%3Ccircle%20cx='19'%20cy='15'%20r='1.6'%20fill='%230a0e0c'/%3E%3C/svg%3E" />
+    <style>
+      :root {
+        --bg: #0a0e0c;
+        --panel: #0e1411;
+        --panel2: #0b110e;
+        --line: #1c2a22;
+        --green: #6cf0a0;
+        --dim: #6f8a78;
+        --dim2: #4f6a58;
+        --amber: #f0b46c;
+        --magenta: #ff5d9e;
+        --blue: #6cb4f0;
+        --purple: #c59cff;
+        --text: #cfe8da;
+        --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+      }
+      * { box-sizing: border-box; }
+      html { scroll-behavior: smooth; }
+      body {
+        margin: 0; background: var(--bg); color: var(--text); font-family: var(--mono);
+        line-height: 1.6; -webkit-font-smoothing: antialiased;
+        background-image: radial-gradient(1200px 600px at 50% -10%, rgba(108,240,160,0.08), transparent 70%);
+      }
+      /* faint CRT scanlines, the game's signature */
+      body::after {
+        content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 100;
+        background: repeating-linear-gradient(0deg, rgba(0,0,0,0.13) 0 1px, transparent 1px 3px);
+        mix-blend-mode: multiply;
+      }
+      a { color: var(--green); text-decoration: none; }
+      .wrap { width: min(1040px, 92vw); margin: 0 auto; }
+
+      /* nav */
+      nav {
+        position: sticky; top: 0; z-index: 50; background: rgba(10,14,12,0.82);
+        backdrop-filter: blur(8px); border-bottom: 1px solid var(--line);
+      }
+      nav .wrap { display: flex; align-items: center; gap: 18px; padding: 12px 0; }
+      .brand { color: var(--green); font-weight: 700; letter-spacing: 1px; font-size: 16px; }
+      .brand .cursor { animation: blink 1.1s steps(1) infinite; }
+      @keyframes blink { 50% { opacity: 0; } }
+      nav .links { margin-left: auto; display: flex; gap: 18px; align-items: center; font-size: 13px; }
+      nav .links a.muted { color: var(--dim); }
+      nav .links a.muted:hover { color: var(--text); }
+      .btn {
+        display: inline-block; font-family: var(--mono); font-weight: 700; font-size: 13px;
+        border-radius: 6px; padding: 8px 14px; cursor: pointer; border: 1px solid transparent; letter-spacing: 0.3px;
+      }
+      .btn.primary { background: var(--green); color: var(--bg); box-shadow: 0 0 16px rgba(108,240,160,0.3); }
+      .btn.primary:hover { filter: brightness(1.08); }
+      .btn.ghost { background: transparent; border-color: var(--line); color: var(--text); }
+      .btn.ghost:hover { border-color: var(--dim); }
+      .btn.kofi { background: var(--magenta); color: #1a0410; box-shadow: 0 0 16px rgba(255,93,158,0.3); }
+      .btn.kofi:hover { filter: brightness(1.08); }
+
+      /* hero */
+      header.hero { padding: clamp(48px, 9vw, 96px) 0 36px; text-align: center; }
+      .pills { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-bottom: 22px; }
+      .pill {
+        font-size: 11px; letter-spacing: 0.5px; text-transform: uppercase; color: var(--dim);
+        border: 1px solid var(--line); border-radius: 999px; padding: 4px 11px; background: var(--panel2);
+      }
+      h1 {
+        font-size: clamp(30px, 6vw, 58px); line-height: 1.05; margin: 0 0 18px; letter-spacing: -0.5px;
+        font-weight: 800; color: #eafff3;
+      }
+      h1 .grad { color: var(--green); }
+      .sub { font-size: clamp(15px, 2.4vw, 19px); color: var(--dim); max-width: 680px; margin: 0 auto 30px; }
+      .sub strong { color: var(--text); font-weight: 600; }
+
+      /* install command */
+      .install {
+        display: inline-flex; align-items: center; gap: 14px; background: var(--panel); border: 1px solid var(--line);
+        border-radius: 9px; padding: 12px 12px 12px 18px; font-size: clamp(13px, 2.2vw, 16px); max-width: 92vw;
+      }
+      .install code { color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .install code .prompt { color: var(--green); user-select: none; }
+      .copy {
+        font-family: var(--mono); font-size: 12px; font-weight: 700; color: var(--bg); background: var(--green);
+        border: none; border-radius: 6px; padding: 7px 12px; cursor: pointer; flex: none;
+      }
+      .copy:hover { filter: brightness(1.08); }
+      .cta-row { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin: 26px 0 10px; }
+      .hint { font-size: 12px; color: var(--dim2); margin-top: 8px; }
+
+      /* screenshot frame */
+      .shot {
+        margin: 46px auto 0; width: min(1000px, 96vw); border: 1px solid var(--line); border-radius: 12px;
+        overflow: hidden; background: var(--panel); box-shadow: 0 30px 90px rgba(0,0,0,0.55);
+      }
+      .shot .bar { display: flex; gap: 7px; padding: 10px 13px; border-bottom: 1px solid var(--line); background: var(--panel2); }
+      .shot .bar i { width: 11px; height: 11px; border-radius: 50%; display: inline-block; }
+      .shot .bar i:nth-child(1){ background:#ff5f57;} .shot .bar i:nth-child(2){ background:#febc2e;} .shot .bar i:nth-child(3){ background:#28c840;}
+      .shot img { display: block; width: 100%; height: auto; }
+
+      /* sections */
+      section { padding: clamp(48px, 8vw, 80px) 0; border-top: 1px solid var(--line); }
+      .eyebrow { color: var(--green); font-size: 12px; letter-spacing: 1.5px; text-transform: uppercase; margin: 0 0 10px; }
+      h2 { font-size: clamp(24px, 4vw, 36px); margin: 0 0 14px; letter-spacing: -0.4px; color: #eafff3; }
+      .lead { color: var(--dim); max-width: 620px; margin: 0 0 36px; }
+
+      /* steps */
+      .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+      .step { background: var(--panel); border: 1px solid var(--line); border-radius: 11px; padding: 22px; }
+      .step .n {
+        width: 30px; height: 30px; border-radius: 8px; display: grid; place-items: center; font-weight: 800;
+        color: var(--bg); background: var(--green); margin-bottom: 14px;
+      }
+      .step h3 { margin: 0 0 6px; font-size: 16px; color: var(--text); }
+      .step p { margin: 0; color: var(--dim); font-size: 14px; }
+
+      /* features */
+      .feat { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+      .card { background: var(--panel); border: 1px solid var(--line); border-radius: 11px; padding: 20px; }
+      .card .ic { font-size: 19px; margin-bottom: 10px; }
+      .card h3 { margin: 0 0 6px; font-size: 15px; color: var(--text); }
+      .card p { margin: 0; color: var(--dim); font-size: 13.5px; }
+      .card.b1 { border-color: rgba(108,240,160,0.35); }
+      .card.b2 { border-color: rgba(108,180,240,0.30); }
+      .card.b3 { border-color: rgba(197,156,255,0.30); }
+
+      /* anti-waste banner */
+      .banner {
+        background: linear-gradient(180deg, var(--panel), var(--panel2)); border: 1px solid var(--line);
+        border-radius: 14px; padding: clamp(26px, 5vw, 44px); text-align: center;
+      }
+      .banner h2 { margin-bottom: 10px; }
+      .banner p { color: var(--dim); max-width: 620px; margin: 0 auto; }
+      .banner .key { color: var(--amber); }
+
+      /* support */
+      .support { text-align: center; }
+      .support .big { font-size: clamp(22px, 4vw, 34px); color: #eafff3; margin: 0 0 12px; }
+      .support p { color: var(--dim); max-width: 560px; margin: 0 auto 26px; }
+
+      footer { border-top: 1px solid var(--line); padding: 30px 0 50px; color: var(--dim2); font-size: 13px; }
+      footer .wrap { display: flex; justify-content: space-between; gap: 14px; flex-wrap: wrap; }
+      footer a { color: var(--dim); }
+
+      @media (max-width: 760px) {
+        .steps, .feat { grid-template-columns: 1fr; }
+        nav .links a.muted { display: none; }
+      }
+    </style>
+  </head>
+  <body>
+    <nav>
+      <div class="wrap">
+        <span class="brand">TOKENGOTCHI<span class="cursor">▮</span></span>
+        <span class="links">
+          <a class="muted" href="#how">How it works</a>
+          <a class="muted" href="#features">Features</a>
+          <a class="ghost btn" href="https://github.com/DanZinov/tokengotchi" target="_blank" rel="noopener">GitHub</a>
+          <a class="kofi btn" href="https://ko-fi.com/danzin" target="_blank" rel="noopener">♥ Support</a>
+        </span>
+      </div>
+    </nav>
+
+    <header class="hero">
+      <div class="wrap">
+        <div class="pills">
+          <span class="pill">Free &amp; open</span>
+          <span class="pill">Runs locally</span>
+          <span class="pill">No pay-to-win</span>
+        </div>
+        <h1>Turn your AI coding into<br /><span class="grad">an idle RPG.</span></h1>
+        <p class="sub">
+          The tokens you already burn in <strong>Claude Code, Cursor, Codex &amp; Gemini</strong> become
+          energy for a hero that fights, levels, and loots <strong>while you work</strong>. Come back from a
+          coding session to cleared floors and fresh gear.
+        </p>
+
+        <div class="install">
+          <code><span class="prompt">$ </span><span id="cmd">npx tokengotchi</span></code>
+          <button class="copy" id="copy">Copy</button>
+        </div>
+        <div class="hint">One command. It reads your local usage and opens the game in your browser.</div>
+
+        <div class="cta-row">
+          <a class="btn primary" href="https://github.com/DanZinov/tokengotchi" target="_blank" rel="noopener">View on GitHub</a>
+          <a class="btn kofi" href="https://ko-fi.com/danzin" target="_blank" rel="noopener">♥ Support on Ko-fi</a>
+        </div>
+
+        <div class="shot">
+          <div class="bar"><i></i><i></i><i></i></div>
+          <img src="./screenshot.png" alt="Tokengotchi gameplay: a hero auto-battling a boss with live token-to-energy feed, classes, loadout and prestige panels" />
+        </div>
+      </div>
+    </header>
+
+    <section id="how">
+      <div class="wrap">
+        <p class="eyebrow">How it works</p>
+        <h2>You code. Your hero climbs.</h2>
+        <p class="lead">No new habits, no extra effort. The signal is already on your disk — Tokengotchi just turns it into progress.</p>
+        <div class="steps">
+          <div class="step">
+            <div class="n">1</div>
+            <h3>You code</h3>
+            <p>Your AI agent writes token counts to local log files as you work — the same data <code>ccusage</code> reads. Nothing leaves your machine.</p>
+          </div>
+          <div class="step">
+            <div class="n">2</div>
+            <h3>Tokens → energy</h3>
+            <p>Tokengotchi converts usage into combat energy, streak-weighted so showing up beats raw spend. Your work is the fuel.</p>
+          </div>
+          <div class="step">
+            <div class="n">3</div>
+            <h3>Come back to loot</h3>
+            <p>Floors cleared, levels gained, gear dropped, bosses down — all earned while you were heads-down in the editor.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="features">
+      <div class="wrap">
+        <p class="eyebrow">What's inside</p>
+        <h2>A real idle game, not a gimmick.</h2>
+        <p class="lead">Tuned combat math, juicy feedback, and the progression loop you'd expect from an idle RPG.</p>
+        <div class="feat">
+          <div class="card b1">
+            <div class="ic">⚔️</div>
+            <h3>Idle auto-battler</h3>
+            <p>Hit flashes, crits, knockback, damage numbers, particles and screen shake — the juice that makes it feel alive.</p>
+          </div>
+          <div class="card b2">
+            <div class="ic">🧙</div>
+            <h3>Classes &amp; builds</h3>
+            <p>Vibe Coder (crit/glass), Refactorer (tank/sustain), Architect (balanced). Switch anytime.</p>
+          </div>
+          <div class="card b3">
+            <div class="ic">💎</div>
+            <h3>Gear &amp; loot</h3>
+            <p>Common → Legendary drops with rarity glow, a loadout you can see, and a hero that visibly evolves.</p>
+          </div>
+          <div class="card">
+            <div class="ic">♾️</div>
+            <h3>Prestige</h3>
+            <p>Reset the run past the first boss for a permanent multiplier — the long-tail loop that keeps you climbing.</p>
+          </div>
+          <div class="card">
+            <div class="ic">🔌</div>
+            <h3>Reads 4 tools</h3>
+            <p>Claude Code, Codex &amp; Gemini out of the box (Cursor experimental). Add another with one small adapter.</p>
+          </div>
+          <div class="card">
+            <div class="ic">🔒</div>
+            <h3>Local &amp; free</h3>
+            <p>No account, no backend, no telemetry. The whole game is free — donations are a thank-you, never power.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="wrap">
+        <div class="banner">
+          <h2>Your work powers your hero — <span class="key">never</span> your wallet.</h2>
+          <p>
+            Tokengotchi is built so burning more tokens isn't the goal: rewards are streak-weighted, it's PvE only,
+            and money buys nothing but goodwill. It celebrates the coding you were already doing.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section class="support">
+      <div class="wrap">
+        <p class="eyebrow">Support</p>
+        <p class="big">Free forever. Fueled by good vibes.</p>
+        <p>If Tokengotchi made a coding session more fun, a coffee helps cover art &amp; hosting. It never unlocks power — just gratitude.</p>
+        <a class="btn kofi" href="https://ko-fi.com/danzin" target="_blank" rel="noopener" style="font-size:15px;padding:12px 22px;">♥ Buy me a coffee on Ko-fi</a>
+      </div>
+    </section>
+
+    <footer>
+      <div class="wrap">
+        <span>Tokengotchi — an idle auto-battler fueled by your AI coding tokens.</span>
+        <span>
+          <a href="https://github.com/DanZinov/tokengotchi" target="_blank" rel="noopener">GitHub</a> ·
+          <a href="https://ko-fi.com/danzin" target="_blank" rel="noopener">Ko-fi</a>
+        </span>
+      </div>
+    </footer>
+
+    <script>
+      const btn = document.getElementById("copy");
+      btn.addEventListener("click", async () => {
+        try {
+          await navigator.clipboard.writeText(document.getElementById("cmd").textContent.trim());
+          const old = btn.textContent;
+          btn.textContent = "Copied!";
+          setTimeout(() => (btn.textContent = old), 1400);
+        } catch (e) {}
+      });
+    </script>
+  </body>
+</html>

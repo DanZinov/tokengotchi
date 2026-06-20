@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Tokengotchi</title>
+    <style>
+      :root {
+        --bg: #0a0e0c;
+        --panel: #0e1411;
+        --panel2: #0b110e;
+        --line: #1c2a22;
+        --green: #6cf0a0;
+        --dim: #4f6a58;
+        --amber: #f0b46c;
+        --magenta: #ff5d9e;
+        --text: #cfe8da;
+        --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+      }
+      * { box-sizing: border-box; }
+      html, body { height: 100%; margin: 0; }
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font-family: var(--mono);
+        display: grid;
+        grid-template-rows: auto 1fr;
+        grid-template-columns: 1fr minmax(248px, 340px);
+        grid-template-areas: "header header" "stage side";
+        height: 100vh;
+      }
+      header {
+        grid-area: header;
+        border-bottom: 1px solid var(--line);
+        padding: 10px 16px;
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        flex-wrap: wrap;
+        background: var(--panel);
+      }
+      .brand { color: var(--green); font-weight: 700; letter-spacing: 1px; }
+      .brand .cursor { animation: blink 1.1s steps(1) infinite; }
+      @keyframes blink { 50% { opacity: 0; } }
+      .stat { display: flex; gap: 7px; align-items: baseline; font-size: 13px; }
+      .stat .k { color: var(--dim); text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px; }
+      .stat .v { color: var(--text); font-weight: 600; }
+      .stat.tokens .v { color: var(--green); }
+      .stat.prestige { display: none; }
+      .stat.prestige .v { color: var(--magenta); }
+      .spacer { margin-left: auto; }
+      .support-btn {
+        font-family: var(--mono); font-size: 12px; font-weight: 700;
+        color: var(--bg); background: var(--green); border: none; border-radius: 5px;
+        padding: 6px 12px; cursor: pointer; letter-spacing: 0.5px;
+        box-shadow: 0 0 14px rgba(108,240,160,0.35);
+      }
+      .support-btn:hover { filter: brightness(1.1); }
+
+      #stage { grid-area: stage; position: relative; overflow: hidden; }
+      /* signature: faint CRT scanlines over the arena */
+      #stage::after {
+        content: ""; position: absolute; inset: 0; pointer-events: none;
+        background: repeating-linear-gradient(0deg, rgba(0,0,0,0.18) 0 1px, transparent 1px 3px);
+        mix-blend-mode: multiply;
+      }
+      #toast {
+        position: absolute; top: 16px; left: 50%; transform: translateX(-50%) translateY(-6px);
+        font-size: 14px; font-weight: 700; opacity: 0; transition: opacity 0.3s ease, transform 0.3s ease;
+        pointer-events: none; text-shadow: 0 0 12px currentColor; z-index: 5;
+      }
+
+      /* right side: stacked panels + log */
+      #side {
+        grid-area: side;
+        border-left: 1px solid var(--line);
+        background: var(--panel);
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+      }
+      .panel { border-bottom: 1px solid var(--line); padding: 11px 12px; }
+      .panel .head {
+        color: var(--dim); text-transform: uppercase; letter-spacing: 0.5px;
+        font-size: 11px; margin-bottom: 9px; display: flex; justify-content: space-between; align-items: center;
+      }
+
+      /* class picker */
+      .classes { display: flex; gap: 6px; }
+      .class-btn {
+        flex: 1; font-family: var(--mono); font-size: 11px; font-weight: 600;
+        color: var(--text); background: var(--panel2); border: 1px solid var(--line);
+        border-radius: 5px; padding: 7px 4px; cursor: pointer; text-align: center; line-height: 1.3;
+      }
+      .class-btn small { display: block; color: var(--dim); font-size: 9px; font-weight: 400; }
+      .class-btn:hover { border-color: var(--dim); }
+      .class-btn.active { border-color: var(--green); color: var(--green); box-shadow: inset 0 0 0 1px var(--green); }
+
+      /* loadout */
+      .slot { display: flex; align-items: center; gap: 8px; font-size: 12px; padding: 3px 0; }
+      .slot .icon { width: 8px; height: 8px; border-radius: 2px; background: var(--dim); flex: none; }
+      .slot .sname { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .slot .smod { color: var(--dim); font-size: 11px; }
+      .slot.empty .sname { color: var(--dim); font-style: italic; }
+      .inv-note { color: var(--dim); font-size: 11px; margin-top: 7px; }
+
+      /* prestige */
+      .prestige-row { display: flex; align-items: center; gap: 8px; }
+      .prestige-btn {
+        flex: 1; font-family: var(--mono); font-size: 11px; font-weight: 700; letter-spacing: 0.5px;
+        color: var(--magenta); background: var(--panel2); border: 1px solid #3a2030;
+        border-radius: 5px; padding: 8px; cursor: pointer;
+      }
+      .prestige-btn:hover:not(:disabled) { border-color: var(--magenta); box-shadow: 0 0 12px rgba(255,93,158,0.25); }
+      .prestige-btn:disabled { color: var(--dim); cursor: not-allowed; border-color: var(--line); }
+      .prestige-sub { color: var(--dim); font-size: 10.5px; margin-top: 6px; line-height: 1.4; }
+
+      /* event log */
+      #log { flex: 1; min-height: 0; overflow-y: auto; padding: 10px 12px; font-size: 12px; line-height: 1.7; }
+      #log .head { color: var(--dim); text-transform: uppercase; letter-spacing: 0.5px; font-size: 11px; margin-bottom: 6px; }
+      .logline { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+      /* donate modal */
+      #donate {
+        position: fixed; inset: 0; z-index: 20; display: none;
+        align-items: center; justify-content: center; background: rgba(4,8,6,0.78);
+      }
+      #donate.open { display: flex; }
+      .donate-card {
+        width: min(460px, 92vw); max-height: 88vh; overflow-y: auto;
+        background: var(--panel); border: 1px solid var(--line);
+        border-radius: 10px; padding: 22px 22px 18px; box-shadow: 0 24px 80px rgba(0,0,0,0.6);
+      }
+      .donate-card h2 { margin: 0 0 4px; color: var(--green); font-size: 17px; letter-spacing: 0.5px; }
+      .donate-card p { margin: 8px 0 0; font-size: 12.5px; line-height: 1.6; color: var(--text); }
+      .donate-card .muted { color: var(--dim); }
+      .donate-links { display: flex; flex-direction: column; gap: 8px; margin: 16px 0 6px; }
+      .donate-links a {
+        display: block; text-align: center; text-decoration: none; font-weight: 700; font-size: 13px;
+        color: var(--bg); background: var(--green); padding: 10px; border-radius: 6px;
+      }
+      .donate-links a:hover { filter: brightness(1.1); }
+      .donate-empty {
+        border: 1px dashed var(--line); border-radius: 6px; padding: 12px; margin: 14px 0 4px;
+        font-size: 11.5px; color: var(--dim); line-height: 1.6;
+      }
+      .donate-close {
+        margin-top: 12px; width: 100%; font-family: var(--mono); font-size: 12px;
+        color: var(--text); background: var(--panel2); border: 1px solid var(--line);
+        border-radius: 6px; padding: 8px; cursor: pointer;
+      }
+      .donate-close:hover { border-color: var(--dim); }
+
+      /* medium: narrow the side rail a little */
+      @media (max-width: 1000px) {
+        body { grid-template-columns: 1fr minmax(220px, 300px); }
+      }
+
+      /* small / narrow window: stack vertically, compact everything, let the rail scroll */
+      @media (max-width: 760px) {
+        body {
+          grid-template-columns: 1fr;
+          grid-template-areas: "header" "stage" "side";
+          grid-template-rows: auto 1fr minmax(190px, 44vh);
+        }
+        header { gap: 12px 14px; padding: 8px 12px; }
+        .stat { font-size: 12px; }
+        #side { border-left: none; border-top: 1px solid var(--line); overflow-y: auto; }
+        .panel { padding: 9px 11px; }
+      }
+
+      /* very small: trim the header to fit, shrink type and controls */
+      @media (max-width: 480px) {
+        header { gap: 8px 12px; }
+        .brand { font-size: 13px; }
+        .stat { font-size: 11px; gap: 5px; }
+        .stat .k { font-size: 10px; }
+        .support-btn { padding: 5px 10px; font-size: 11px; }
+        .class-btn { font-size: 10px; padding: 6px 3px; }
+        .class-btn small { font-size: 8px; }
+        .slot, .inv-note, .prestige-sub { font-size: 11px; }
+        #log { font-size: 11px; }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <span class="brand">TOKENGOTCHI<span class="cursor">▮</span></span>
+      <span class="stat"><span class="k">floor</span><span class="v" id="floor">—</span></span>
+      <span class="stat"><span class="k">lvl</span><span class="v" id="level">—</span></span>
+      <span class="stat"><span class="k">streak</span><span class="v" id="streak">—</span></span>
+      <span class="stat tokens"><span class="k">tokens</span><span class="v" id="tokens">—</span></span>
+      <span class="stat"><span class="k">energy</span><span class="v" id="energy">—</span></span>
+      <span class="stat prestige" id="prestige-stat"><span class="k">prestige</span><span class="v" id="prestige">—</span></span>
+      <span class="spacer"></span>
+      <button class="support-btn" id="support">♥ Support</button>
+    </header>
+
+    <div id="stage">
+      <div id="toast"></div>
+    </div>
+
+    <div id="side">
+      <div class="panel">
+        <div class="head"><span>// class</span><span id="class-name" style="color: var(--text)">—</span></div>
+        <div class="classes" id="classes"></div>
+      </div>
+
+      <div class="panel">
+        <div class="head">// loadout</div>
+        <div class="slot empty" id="slot-weapon"><span class="icon"></span><span class="sname">weapon —</span><span class="smod"></span></div>
+        <div class="slot empty" id="slot-armor"><span class="icon"></span><span class="sname">armor —</span><span class="smod"></span></div>
+        <div class="slot empty" id="slot-trinket"><span class="icon"></span><span class="sname">trinket —</span><span class="smod"></span></div>
+        <div class="inv-note" id="inv-note">stash: 0 items</div>
+      </div>
+
+      <div class="panel">
+        <div class="head">// prestige</div>
+        <div class="prestige-row">
+          <button class="prestige-btn" id="prestige-btn" disabled>PRESTIGE</button>
+        </div>
+        <div class="prestige-sub" id="prestige-sub">Reach floor 10 to reset for a permanent multiplier.</div>
+      </div>
+
+      <div id="log">
+        <div class="head">// event log</div>
+      </div>
+    </div>
+
+    <div id="donate">
+      <div class="donate-card">
+        <h2>♥ Support Tokengotchi</h2>
+        <p>Tokengotchi is <strong>free</strong> — the whole game, no paywall. Donations are a
+          thank-you and help fund art &amp; hosting. They <span class="muted">never</span> buy power:
+          your hero is fueled by the work you already do.</p>
+        <div class="donate-links" id="donate-links"></div>
+        <button class="donate-close" id="donate-close">close</button>
+      </div>
+    </div>
+
+    <script type="module" src="/src/client/main.ts"></script>
+  </body>
+</html>
