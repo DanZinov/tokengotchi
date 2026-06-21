@@ -1,13 +1,28 @@
 {
   "name": "tokengotchi",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": false,
   "type": "module",
   "description": "An idle auto-battler fueled by your real AI coding token usage. Your work powers your hero.",
-  "keywords": ["idle-game", "rpg", "cli", "ai", "claude-code", "codex", "tokens", "pixijs", "ccusage"],
+  "keywords": [
+    "idle-game",
+    "rpg",
+    "cli",
+    "ai",
+    "claude-code",
+    "codex",
+    "tokens",
+    "pixijs",
+    "ccusage"
+  ],
   "homepage": "https://danzinov.github.io/tokengotchi/",
-  "repository": { "type": "git", "url": "git+https://github.com/DanZinov/tokengotchi.git" },
-  "bugs": { "url": "https://github.com/DanZinov/tokengotchi/issues" },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DanZinov/tokengotchi.git"
+  },
+  "bugs": {
+    "url": "https://github.com/DanZinov/tokengotchi/issues"
+  },
   "author": "Daniil Zinovyev",
   "license": "MIT",
   "bin": {
