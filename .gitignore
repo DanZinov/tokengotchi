@@ -19,3 +19,6 @@ TokenForge-PRD*.md
 
 # raw screen-recording source (compressed docs/demo.mp4 is what ships)
 /*.mov
+
+# internal design/planning docs (kept local, not published)
+specs/

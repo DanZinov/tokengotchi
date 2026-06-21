@@ -12,6 +12,5 @@ attribution required):
    `AnimatedSprite` (or `Sprite`) instead of the placeholder `Graphics` body.
 4. Keep the returned `{ view, body, label }` shape — nothing else needs to change.
 
-For the AI-generated long tail (item icons, enemy/gear variants, cosmetic skins),
-see PRD §8.3. Confirm each tool's commercial license before shipping; free tiers
-often don't grant commercial rights.
+If you generate art with an AI tool, double-check its license before shipping — several
+only grant commercial rights on paid plans.
