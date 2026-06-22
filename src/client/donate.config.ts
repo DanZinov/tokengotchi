@@ -1,8 +1,9 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// DONATIONS — Tokengotchi is 100% free. Donations are a thank-you, never power.
+// TIPS — Tokengotchi is 100% free. Tips are a thank-you, never power.
+// (Stripe restricts the word "donation" to registered charities; creators use "tip".)
 //
 // Drop your handle(s) below. The in-game "Support" panel shows only the links you
-// fill in; leave a field as "" to hide it. v0 has no backend, so these are simply
+// fill in; leave a field as "" to hide it. There's no backend, so these are simply
 // outbound links to platforms that handle the money for you.
 //
 //   • GitHub Sponsors — best fit for a dev audience; tied to your ACCOUNT, not a
@@ -27,6 +28,6 @@ export const DONATE_LINKS: DonateLink[] = (
     GITHUB_SPONSORS_USER && { label: "GitHub Sponsors", url: `https://github.com/sponsors/${GITHUB_SPONSORS_USER}` },
     KOFI_HANDLE && { label: "Ko-fi", url: `https://ko-fi.com/${KOFI_HANDLE}` },
     BUYMEACOFFEE_HANDLE && { label: "Buy Me a Coffee", url: `https://buymeacoffee.com/${BUYMEACOFFEE_HANDLE}` },
-    CUSTOM_LINK && { label: "Donate", url: CUSTOM_LINK },
+    CUSTOM_LINK && { label: "Tip", url: CUSTOM_LINK },
   ] as (DonateLink | "" | false)[]
 ).filter(Boolean) as DonateLink[];
